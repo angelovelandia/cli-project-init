@@ -16,8 +16,16 @@ const QUERYS = [
   },
   {
     name: "router",
-    type: "input",
-    message: "Crear router true/false: ",
+    type: "list",
+    message: "Crear router: ",
+    choices: ["true", "false"],
+    default: "true",
+  },
+  {
+    name: "hooks_helpers",
+    type: "list",
+    message: "Crear hooks y helpers: ",
+    choices: ["true", "false"],
     default: "true",
   },
   {
@@ -73,114 +81,192 @@ const queryParams = () => {
 };
 
 const createRoute = (route) => {
-  if (!fs.existsSync(route)) {
-    fs.mkdirSync(route, "0777");
-  }
-};
-
-const createFile = (route, data) => {
-  if (!fs.existsSync(route)) {
-    fs.writeFileSync(route, data);
-  }
-};
-
-const createProjectReactJSViteJS = (data) => {
   return new Promise((resolve, reject) => {
-    const extFilesComponents = data.ext;
-    const extFilesStyles = data.extcss;
-    const router = data.router;
-    const pathStyles = `${PATH}/src/styles/`;
-    const pathStylesScss = `${PATH}/src/styles/components/`;
-    const pathBase = `${PATH}/src/components/`;
-    let pathFileCss;
-
-    createRoute(pathBase);
-
-    let components = data.components.split(",");
-    log(chalk.green("Creando componentes: " + components));
-    log(chalk.green("Creando styles con: " + extFilesStyles));
-
-    for (let i = 0; i < components.length; i++) {
-      try {
-        log(chalk.cyan(components[i].trim() + " ✔️"));
-        let pathComponent = `${pathBase}${components[i].trim()}`;
-        let pathFileComponent = `${pathBase}${components[
-          i
-        ].trim()}/${components[i].trim()}${extFilesComponents}`;
-
-        //Creando ruta para guardar estilos
-        createRoute(pathStyles);
-
-        if (extFilesStyles === ".scss") {
-          pathFileCss = `${pathStyles}/components/_${components[i]
-            .trim()
-            .toLowerCase()}${extFilesStyles}`;
-          let raizScss = pathStyles + "styles.scss";
-          //Creando ruta complementaria para SCSS
-          createRoute(pathStylesScss);
-          createFile(raizScss, "styles");
-          createFile(pathFileCss, "styles");
+    if (!fs.existsSync(route)) {
+      fs.mkdir(route, "0777", (err) => {
+        if (err) {
+          reject(err);
         } else {
-          pathFileCss = `${pathStyles}/${components[i]
-            .trim()
-            .toLowerCase()}${extFilesStyles}`;
-          let fileCss = `${pathStyles}${components[i]
-            .trim()
-            .toLowerCase()}${extFilesStyles}`;
-          createFile(fileCss, "styles");
-          createFile(pathFileCss, "styles");
+          resolve();
         }
-
-        createRoute(pathStyles);
-        createRoute(pathComponent);
-
-        let dataComponent = EXPORT_DEFAULT.replace(
-          "[component]",
-          components[i].trim()
-        ).replace("[component]", components[i].trim());
-        createFile(pathFileComponent, dataComponent);
-      } catch (error) {
-        log(chalk.green(components[i] + " ❌"));
-      }
+      });
+    } else {
+      resolve();
     }
-
-    if (router == "true") {
-      log(chalk.green("Creando router: " + components));
-      let path = `${PATH}/src/router/`;
-      let pathFile = `${PATH}/src/router/index` + extFilesComponents;
-      createRoute(path);
-      createFile(pathFile, EXPORT_DEFAULT_ROUTER);
-    }
-    resolve(true);
   });
 };
 
+const createFile = (route, data = "", extFilesStyles = "") => {
+  return new Promise((resolve, reject) => {
+    if (extFilesStyles === ".scss") {
+      if (fs.existsSync(route)) {
+        fs.appendFile(route, data, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        fs.writeFile(route, data, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      }
+    } else {
+      fs.writeFile(route, data, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    }
+  });
+};
+
+const createStructReactJS = async (
+  component,
+  extFilesComponents,
+  extFilesStyles
+) => {
+  const componentName = component.trim();
+  const pathBase = `${PATH}/src/components/`;
+  const pathComponent = `${pathBase}${componentName}`;
+  const pathFileComponent = `${pathComponent}/${componentName}${extFilesComponents}`;
+
+  await createRoute(pathBase);
+
+  log(chalk.cyan(componentName + " ✔️"));
+
+  const pathStyles = `${PATH}/src/styles/`;
+  await createRoute(pathStyles);
+  await createRoute(pathComponent);
+
+  let pathFileCss = "";
+  let styles = "";
+  let dataComponent = "";
+
+  if (extFilesStyles === ".scss") {
+    const pathStylesScss = `${pathStyles}/components/`;
+    pathFileCss = `${pathStylesScss}/_${componentName.toLowerCase()}${extFilesStyles}`;
+    const raizScss = pathStyles + "styles.scss";
+
+    await createRoute(pathStylesScss);
+    await createFile(pathFileCss);
+
+    styles += `@import "./components/${componentName.toLowerCase()}";\n`;
+    await createFile(raizScss, styles, extFilesStyles);
+    dataComponent = EXPORT_DEFAULT.replace(
+      "[component]",
+      componentName
+    ).replace("[component]", componentName);
+  } else {
+    pathFileCss = `${pathStyles}/${componentName.toLowerCase()}${extFilesStyles}`;
+    const fileCss = `${pathStyles}${componentName.toLowerCase()}${extFilesStyles}`;
+    await createFile(fileCss);
+    await createFile(pathFileCss);
+    let importCss = `import "../../styles/${componentName.toLowerCase()}${extFilesStyles}";\n\n`;
+    dataComponent = `${importCss}${EXPORT_DEFAULT.replace(
+      "[component]",
+      componentName
+    ).replace("[component]", componentName)}`;
+  }
+  await createFile(pathFileComponent, dataComponent);
+};
+
+const createHooksHelpers = async (extFilesComponents) => {
+  const pathHook = `${PATH}/src/hooks/`;
+  const pathHookFile = `${PATH}/src/hooks/index${extFilesComponents}`;
+  const pathHelpers = `${PATH}/src/helpers/`;
+  const pathHelpersFile = `${PATH}/src/helpers/index-helpers${extFilesComponents}`;
+
+  await createRoute(pathHook);
+  await createFile(pathHookFile);
+  await createRoute(pathHelpers);
+  await createFile(pathHelpersFile);
+};
+
+const createRouter = async (extFilesComponents) => {
+  const path = `${PATH}/src/router/`;
+  const pathFile = `${PATH}/src/router/index${extFilesComponents}`;
+
+  await createRoute(path);
+  await createFile(pathFile, EXPORT_DEFAULT_ROUTER);
+};
+
+const createProjectReact = async (data) => {
+  const extFilesComponents = data.ext;
+  const extFilesStyles = data.extcss;
+  const router = data.router;
+  const hooks_helpers = data.hooks_helpers;
+
+  log(chalk.green("Verificando SRC"));
+  let PATH_SRC = `${PATH}/src/`;
+  await createRoute(PATH_SRC);
+
+  const components = data.components.split(",");
+  log(chalk.green("Creando componentes: " + components));
+  log(chalk.green("Creando estilos con: " + extFilesStyles));
+
+  for (const component of components) {
+    try {
+      await createStructReactJS(component, extFilesComponents, extFilesStyles);
+    } catch (error) {
+      log.error(error);
+      log(chalk.green(component + " ❌"));
+    }
+  }
+
+  if (router === "true") {
+    log(chalk.green("Creando router"));
+    await createRouter(extFilesComponents);
+  }
+
+  if (hooks_helpers === "true") {
+    log(chalk.green("Creando hooks y helpers"));
+    await createHooksHelpers(extFilesComponents);
+  }
+
+  return true;
+};
+
 const FUNCTIONS_MAP = {
-  ReactJS: createProjectReactJSViteJS,
+  ReactJS: createProjectReact,
 };
 
 const createProjectTemplate = async (data) => {
   const template = data.template;
-  let resp = await FUNCTIONS_MAP[template](data);
-  if (resp) {
-    console.log(
-      chalk.green(
-        "Todos los componentes " +
-          chalk.blue.underline.bold("fueron creados") +
-          " con exito!"
-      )
-    );
+  const createProjectFunction = FUNCTIONS_MAP[template];
+  if (createProjectFunction) {
+    try {
+      const success = await createProjectFunction(data);
+      if (success) {
+        console.log(
+          chalk.green("Todos los componentes fueron creados con éxito!")
+        );
+      } else {
+        console.log(
+          chalk.yellow("Algo salió mal durante la creación de componentes.")
+        );
+      }
+    } catch (error) {
+      console.log(chalk.red("Error al crear el proyecto:", error));
+    }
   } else {
     console.log(
-      chalk.yellow(
-        "Durante la creacion de componentes " +
-          chalk.red.underline.bold("algo salio mal")
-      )
+      chalk.red("No se encontró una función para la plantilla seleccionada.")
     );
   }
 };
 
-(async () => {
+const start = async () => {
   initConsole("@AVCODEV");
-  createProjectTemplate(await queryParams());
-})();
+  const data = await queryParams();
+  await createProjectTemplate(data);
+};
+
+start();
