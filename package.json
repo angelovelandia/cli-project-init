@@ -1,0 +1,45 @@
+{
+  "name": "cli-project-init",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "./bin/card.js",
+  "bin": {
+    "angelovelandia": "./bin/card.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angelovelandia/cli-project-init.git"
+  },
+  "scripts": {
+    "prebuild": "npm run build",
+    "build": "npm publish",
+    "dev": "node index.js",
+    "lint": "standard"
+  },
+  "keywords": [
+    "cli",
+    "reactjs",
+    "vitejs",
+    "js",
+    "modules",
+    "views"
+  ],
+  "files": [
+    "bin/card.js",
+    "bin/output"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "standard": "^17.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/angelovelandia/cli-project-init/issues"
+  },
+  "dependencies": {
+    "chalk": "^5.2.0",
+    "figlet": "^1.6.0",
+    "inquirer": "^9.2.7"
+  }
+}
