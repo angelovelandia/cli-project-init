@@ -1,13 +1,15 @@
 {
   "name": "cli-project-init",
-  "version": "4.1.0",
+  "version": "5.1.0",
   "type": "module",
   "description": "",
   "main": "index.js",
-  "bin": "./index.js",
+  "bin": {
+    "angelovelandia": "./bin/index.js"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/angelovelandia/cli-project-init.git"
+    "url": "https://github.com/angelovelandia/cli-project-init.git"
   },
   "scripts": {
     "build": "npm publish",
@@ -18,7 +20,7 @@
     "cli",
     "reactjs",
     "vitejs",
-    "js",
+    "js", 
     "modules",
     "views"
   ],
