@@ -5,7 +5,7 @@ const QUERYS = [
     name: "template",
     type: "list",
     message: "Select your project: ",
-    choices: ["ReactJS", "ViteJS", "Angular", "NextJS"],
+    choices: ["ReactJS"],
     default: "ReactJS",
   },
   {
