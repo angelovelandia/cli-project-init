@@ -3,66 +3,21 @@
 import chalk from "chalk";
 import figlet from "figlet";
 import inquirer from "inquirer";
-import fs from "fs";
 
-const PATH = process.cwd().replace("\\", "/");
+import {
+  PATH,
+  QUERYS,
+  QUERYS_CREATE_ADITIONAL,
+  QUERYS_CREATE_COMPONENTS,
+  EXPORT_DEFAULT,
+  log,
+} from "./config/index.js";
 
-const QUERYS = [
-  {
-    name: "template",
-    type: "list",
-    message: "Seleccionar plantilla: ",
-    choices: ["ReactJS"],
-  },
-  {
-    name: "router",
-    type: "list",
-    message: "Crear router: ",
-    choices: ["true", "false"],
-    default: "true",
-  },
-  {
-    name: "hooks_helpers",
-    type: "list",
-    message: "Crear hooks y helpers: ",
-    choices: ["true", "false"],
-    default: "true",
-  },
-  {
-    name: "components",
-    type: "input",
-    message: "Escriba los componentes separados por coma (Header, Footer): ",
-    default: "Header, Banner, Footer, Loader, Modals",
-  },
-  {
-    name: "ext",
-    type: "list",
-    message: "Selecionar extension de componentes:",
-    choices: [".js", ".jsx"],
-    default: ".js",
-  },
-  {
-    name: "extcss",
-    type: "list",
-    message: "Selecionar extension de archivos de estilos:",
-    choices: [".css", ".scss"],
-    default: ".css",
-  },
-];
-
-const EXPORT_DEFAULT = `export default function [component]() {
-    return (
-        <div>[component]</div>
-    )
-}`;
-
-const EXPORT_DEFAULT_ROUTER = `export default function Router() {
-    return (
-        <div>Router</div>
-    )
-}`;
-
-const log = console.log;
+import {
+  queryParamsAditionalTrace,
+  createRoute,
+  createFile,
+} from "./utils/index.js";
 
 const initConsole = (text) => {
   console.log(
@@ -80,52 +35,43 @@ const queryParams = () => {
   return inquirer.prompt(QUERYS);
 };
 
-const createRoute = (route) => {
-  return new Promise((resolve, reject) => {
-    if (!fs.existsSync(route)) {
-      fs.mkdir(route, "0777", (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    } else {
-      resolve();
-    }
-  });
+const queryParamsComponents = () => {
+  return inquirer.prompt(QUERYS_CREATE_COMPONENTS);
 };
 
-const createFile = (route, data = "", extFilesStyles = "") => {
-  return new Promise((resolve, reject) => {
-    if (extFilesStyles === ".scss") {
-      if (fs.existsSync(route)) {
-        fs.appendFile(route, data, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        fs.writeFile(route, data, (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      }
+const queryParamsAditional = () => {
+  return inquirer.prompt(QUERYS_CREATE_ADITIONAL);
+};
+
+const queryParamsComponentsTrace = async (data) => {
+  try {
+    const success = await createProjectReact(data);
+    if (success) {
+      console.log(
+        chalk.green("Todos los componentes fueron creados con éxito!")
+      );
     } else {
-      fs.writeFile(route, data, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+      console.log(
+        chalk.yellow("Algo salió mal durante la creación de componentes.")
+      );
     }
-  });
+  } catch (error) {
+    console.log(chalk.red("Error al crear el proyecto:", error));
+  }
+};
+
+const OPTIONS_QUERYS = {
+  "Create components": queryParamsComponents,
+  "Create componentsTrace": queryParamsComponentsTrace,
+  Additional: queryParamsAditional,
+  AdditionalTrace: queryParamsAditionalTrace,
+};
+
+const initProject = async (data) => {
+  if (OPTIONS_QUERYS[data.template_submenu]) {
+    let resp = await OPTIONS_QUERYS[data.template_submenu]();
+    await OPTIONS_QUERYS[`${data.template_submenu}Trace`](resp);
+  }
 };
 
 const createStructReactJS = async (
@@ -178,31 +124,9 @@ const createStructReactJS = async (
   await createFile(pathFileComponent, dataComponent);
 };
 
-const createHooksHelpers = async (extFilesComponents) => {
-  const pathHook = `${PATH}/src/hooks/`;
-  const pathHookFile = `${PATH}/src/hooks/index${extFilesComponents}`;
-  const pathHelpers = `${PATH}/src/helpers/`;
-  const pathHelpersFile = `${PATH}/src/helpers/index-helpers${extFilesComponents}`;
-
-  await createRoute(pathHook);
-  await createFile(pathHookFile);
-  await createRoute(pathHelpers);
-  await createFile(pathHelpersFile);
-};
-
-const createRouter = async (extFilesComponents) => {
-  const path = `${PATH}/src/router/`;
-  const pathFile = `${PATH}/src/router/index${extFilesComponents}`;
-
-  await createRoute(path);
-  await createFile(pathFile, EXPORT_DEFAULT_ROUTER);
-};
-
 const createProjectReact = async (data) => {
   const extFilesComponents = data.ext;
   const extFilesStyles = data.extcss;
-  const router = data.router;
-  const hooks_helpers = data.hooks_helpers;
 
   log(chalk.green("Verificando SRC"));
   let PATH_SRC = `${PATH}/src/`;
@@ -220,53 +144,12 @@ const createProjectReact = async (data) => {
       log(chalk.green(component + " ❌"));
     }
   }
-
-  if (router === "true") {
-    log(chalk.green("Creando router"));
-    await createRouter(extFilesComponents);
-  }
-
-  if (hooks_helpers === "true") {
-    log(chalk.green("Creando hooks y helpers"));
-    await createHooksHelpers(extFilesComponents);
-  }
-
   return true;
 };
-
-const FUNCTIONS_MAP = {
-  ReactJS: createProjectReact,
-};
-
-const createProjectTemplate = async (data) => {
-  const template = data.template;
-  const createProjectFunction = FUNCTIONS_MAP[template];
-  if (createProjectFunction) {
-    try {
-      const success = await createProjectFunction(data);
-      if (success) {
-        console.log(
-          chalk.green("Todos los componentes fueron creados con éxito!")
-        );
-      } else {
-        console.log(
-          chalk.yellow("Algo salió mal durante la creación de componentes.")
-        );
-      }
-    } catch (error) {
-      console.log(chalk.red("Error al crear el proyecto:", error));
-    }
-  } else {
-    console.log(
-      chalk.red("No se encontró una función para la plantilla seleccionada.")
-    );
-  }
-};
-
 const start = async () => {
   initConsole("@AVCODEV");
   const data = await queryParams();
-  await createProjectTemplate(data);
+  await initProject(data);
 };
 
 start();
